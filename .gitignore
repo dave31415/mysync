@@ -1,3 +1,5 @@
 pems/*
 mysync_config
+mysync_data/*
+mysync_data_enc/*
 
