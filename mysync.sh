@@ -29,16 +29,16 @@ if [ -f mysync_config ]; then
    source mysync_config
 else
    echo Need to create a mysync_config file. See the Readme.
-   echo creating a dummy file
    exit 1
 fi
 
 encrypt_pem () {
-   openssl aes-256-cbc -a -salt -in pems/${pem_file} -out ${pem_file}.enc
+   openssl aes-256-cbc -a -salt -in pems/${pem_file} -out pems/${pem_file}.enc
 }
 
 decrypt_pem () {
-   openssl aes-256-cbc -d -a -in pems/${pem_file}.enc -out mysync_data/${pem_file}
+   openssl aes-256-cbc -d -a -in pems/${pem_file}.enc -out pems/${pem_file}
+   chmod 0400 pems/${pem_file}
 }
 
 encrypt () {
@@ -63,6 +63,12 @@ elif [ $cmd == 'encrypt' ]; then
 elif [ $cmd == 'decrypt' ]; then
    file=$2
    decrypt $file
+elif [ $cmd == 'encrypt_pem' ]; then
+    file=$2
+    encrypt_pem
+elif [ $cmd == 'decrypt_pem' ]; then
+     file=$2
+     decrypt_pem
 elif [ $cmd == push ]; then
    file=$2
    encrypt $file
@@ -70,4 +76,16 @@ elif [ $cmd == push ]; then
 elif [ $cmd == pull ]; then
    file=$2
    rsync -rave "ssh -i pems/${pem_file}" ${user}@${ip}:mysync_data_enc/* mysync_data_enc
+elif [ $cmd == list_remote ]; then
+   ssh -i pems/${pem_file} ${user}@${ip} ls mysync/mysync_data_enc
+elif [ $cmd == clear_remote ]; then
+    echo removing remote data
+    ssh -i pems/${pem_file} ${user}@${ip} rm -f mysync/mysync_data/\*
+    ssh -i pems/${pem_file} ${user}@${ip} rm -f mysync/mysync_data_enc/\*
+elif [ $cmd == clear_local ]; then
+    echo removing local data
+    rm -f mysync/mysync_data/*
+    rm -f mysync/mysync_data_enc/*
+else
+   echo Command $cmd not
 fi
