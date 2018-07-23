@@ -21,16 +21,18 @@ if [ ! -d pems ]; then
    mkdir -p pems
 fi
 
-if [ $# -eq 0 ]; then
-   exit 1
-fi
-
 if [ -f mysync_config ]; then
    source mysync_config
+   chmod 400 pems/$pem_file
 else
    echo Need to create a mysync_config file. See the Readme.
    exit 1
 fi
+
+if [ $# -eq 0 ]; then
+   exit 1
+fi
+
 
 encrypt_pem () {
    openssl aes-256-cbc -a -salt -in pems/${pem_file} -out pems/${pem_file}.enc
@@ -38,6 +40,15 @@ encrypt_pem () {
 
 decrypt_pem () {
    openssl aes-256-cbc -d -a -in pems/${pem_file}.enc -out pems/${pem_file}
+   chmod 0400 pems/${pem_file}
+}
+
+encrypt_config () {
+   openssl aes-256-cbc -a -salt -in mysync_config -out mysync_config.enc
+}
+
+decrypt_config () {
+   openssl aes-256-cbc -d -a -in mysync_config.enc -out mysync_config
    chmod 0400 pems/${pem_file}
 }
 
@@ -64,18 +75,23 @@ elif [ $cmd == 'decrypt' ]; then
    file=$2
    decrypt $file
 elif [ $cmd == 'encrypt_pem' ]; then
-    file=$2
     encrypt_pem
 elif [ $cmd == 'decrypt_pem' ]; then
-     file=$2
      decrypt_pem
+elif [ $cmd == 'encrypt_config' ]; then
+     encrypt_config
+elif [ $cmd == 'decrypt_condif' ]; then
+      decrypt_config
 elif [ $cmd == push ]; then
    file=$2
    encrypt $file
-   rsync -rave "ssh -i pems/${pem_file}" mysync_data_enc/${file}.enc ${user}@${ip}:mysync_data_enc
+   rsync -rave "ssh -i pems/${pem_file}" mysync_data_enc/${file}.enc ${user}@${ip}:mysync/mysync_data_enc
 elif [ $cmd == pull ]; then
    file=$2
-   rsync -rave "ssh -i pems/${pem_file}" ${user}@${ip}:mysync_data_enc/* mysync_data_enc
+   if [ -z $file ]; then
+      file='*'
+   fi
+   rsync -rave "ssh -i pems/${pem_file}" ${user}@${ip}:mysync/mysync_data_enc/${file}.enc mysync_data_enc
 elif [ $cmd == list_remote ]; then
    ssh -i pems/${pem_file} ${user}@${ip} ls mysync/mysync_data_enc
 elif [ $cmd == clear_remote ]; then
